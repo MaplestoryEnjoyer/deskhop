@@ -22,6 +22,20 @@
 
 #define KBD_LED_AS_INDICATOR 0
 
+
+/**===================================================== *
+ * ============  Vertical Layout toggle  =============== *
+ * ===================================================== *
+ *
+ * Enable the custom vertical 3+1 monitor layout. This is defined here, before
+ * JUMP_THRESHOLD, so the layout can raise the PC-switch threshold for its
+ * vertical edge. Full description, revert steps, and the Windows primary-display
+ * requirement are in the "Vertical Layout" section lower in this file. Comment
+ * this out to restore the stock left/right switching.
+ * */
+
+#define DESKHOP_LAYOUT_VERTICAL_3PLUS1
+
 /**===================================================== *
  * ===========  Hotkey for output switching  =========== *
  * ===================================================== *
@@ -77,7 +91,14 @@
 #define MOUSE_SPEED_B_FACTOR_X 16
 #define MOUSE_SPEED_B_FACTOR_Y 28
 
+#ifdef DESKHOP_LAYOUT_VERTICAL_3PLUS1
+/* The middle monitor's top edge is the only PC crossing in the vertical layout
+   and is easy to hit by accident (reaching a menu bar, fast upward flicks), so
+   require deliberate "force" to cross. Tune in the web config if desired. */
+#define JUMP_THRESHOLD 400
+#else
 #define JUMP_THRESHOLD 0
+#endif
 
 /* Mouse acceleration */
 #define ENABLE_ACCELERATION 1
@@ -193,20 +214,23 @@
  * left/right just walks across the bottom PC's monitors. The matching switch
  * logic lives in do_screen_switch() in mouse.c.
  *
- * Define DESKHOP_LAYOUT_VERTICAL_3PLUS1 to enable it; comment it out to restore
- * the stock left/right linear switching. Set screen_count = 3 for the bottom PC
- * (defaults.c, or via the web config).
+ * To enable: define DESKHOP_LAYOUT_VERTICAL_3PLUS1 (done near the top of this
+ * file) and set screen_count = 3 for the bottom PC (defaults.c, or via the web
+ * config). To revert to stock left/right switching: comment that define out AND
+ * reset OUTPUT_B screen_count back to 1. The per-output "pos" / "Screen Position"
+ * field is NOT used by this layout (only the stock path reads it).
  *
  * IMPORTANT (Windows): set the MIDDLE monitor as the Windows "primary display"
  * on the bottom PC. Since KB5003637, Windows maps absolute mouse coordinates
  * only to the primary monitor (see README known issues); mapping the middle
  * monitor to screen_index 1 (the absolute "main" screen) is what makes the
  * vertical jump land correctly. The left/right monitors use DeskHop's
- * (experimental) relative-mouse workaround for non-primary screens.
+ * (experimental) relative-mouse workaround for non-primary screens. The top
+ * monitor should be horizontally aligned with and similar in width to the
+ * middle one: X is carried over 1:1 on a vertical jump (no X scaling), so a
+ * large width/offset mismatch shifts the cursor horizontally on arrival.
  *
  * */
-
-#define DESKHOP_LAYOUT_VERTICAL_3PLUS1
 
 
 /**================================================== *

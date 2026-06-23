@@ -15,7 +15,11 @@
 #include "misc.h"
 #include "screen.h"
 
-#define CURRENT_CONFIG_VERSION 8
+/* Bumped 8 -> 9 for the vertical 3+1 layout default-shape change (OUTPUT_B
+   screen_count = 3, both outputs default to Windows). The bump forces a one-time
+   reseed from default_config on units still holding the old v8 config, so the
+   new defaults actually take effect instead of stale flash values winning. */
+#define CURRENT_CONFIG_VERSION 9
 
 /*==============================================================================
  *  Configuration Data

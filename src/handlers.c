@@ -190,6 +190,16 @@ void handle_mouse_abs_uart_msg(uart_packet_t *packet, device_t *state) {
 /* Function handles request to switch output  */
 void handle_output_select_msg(uart_packet_t *packet, device_t *state) {
     state->active_output = packet->data[0];
+
+#ifdef DESKHOP_LAYOUT_VERTICAL_3PLUS1
+    /* Mirror the vertical-layout reset done in set_active_output(): this board
+       may own the mouse while the keyboard/hotkey lives on the other board, so
+       the switch arrives here over UART rather than via set_active_output(). */
+    state->relative_mouse                        = false;
+    state->config.output[OUTPUT_A].screen_index  = 1;
+    state->config.output[OUTPUT_B].screen_index  = 1;
+#endif
+
     if (state->tud_connected)
         release_all_keys(state);
 
@@ -385,6 +395,17 @@ void handle_heartbeat_msg(uart_packet_t *packet, device_t *state) {
 /* Update output variable, set LED on/off and notify the other board so they are in sync. */
 void set_active_output(device_t *state, uint8_t new_output) {
     state->active_output = new_output;
+
+#ifdef DESKHOP_LAYOUT_VERTICAL_3PLUS1
+    /* Vertical 3+1 layout: every PC switch (mouse edge, hotkey, or UART select)
+       re-enters on the absolute main screen. Clear relative mode and reset both
+       outputs to screen_index 1 so toggling outputs while parked on a side
+       monitor cannot strand the cursor in relative mode on the wrong screen. */
+    state->relative_mouse                        = false;
+    state->config.output[OUTPUT_A].screen_index  = 1;
+    state->config.output[OUTPUT_B].screen_index  = 1;
+#endif
+
     restore_leds(state);
     send_value(new_output, OUTPUT_SELECT_MSG);
 

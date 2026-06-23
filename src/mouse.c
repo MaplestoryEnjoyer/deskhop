@@ -102,7 +102,7 @@ float calculate_mouse_acceleration_factor(int32_t offset_x, int32_t offset_y) {
     return lower->factor + interpolation_pos * (upper->factor - lower->factor);
 }
 
-/* Returns LEFT if need to jump left, RIGHT if right, NONE otherwise */
+/* Returns the edge crossed (LEFT/RIGHT/TOP/BOTTOM) if a switch is needed, NONE otherwise */
 enum screen_pos_e update_mouse_position(device_t *state, mouse_values_t *values) {
     output_t *current    = &state->config.output[state->active_output];
     uint8_t reduce_speed = 0;
@@ -275,7 +275,8 @@ void do_screen_switch(device_t *state, int direction) {
      * absolute "main" screen, so the vertical jump (an absolute report) lands
      * correctly and relative_mouse stays consistent across the crossing.
      * To flip which port is which PC, swap OUTPUT_A / OUTPUT_B below and the
-     * screen_count values in defaults.c. */
+     * screen_count values in defaults.c. The screen_index targets (2/3) mirror
+     * defaults.c OUTPUT_B screen_count = 3; screen_count is not consulted here. */
     if (state->active_output == OUTPUT_B) {                  /* bottom PC, multiple monitors */
         switch (output->screen_index) {
         case 1:                                              /* MIDDLE monitor (main) */
@@ -302,6 +303,12 @@ void do_screen_switch(device_t *state, int direction) {
     }
 #else
     /* Stock linear (left/right) switching. */
+
+    /* Vertical edges are not switch points in the stock linear layout. The
+       4-edge is_screen_switch_needed() can return TOP/BOTTOM globally, so guard
+       against them here (matches the AsocPro reference). */
+    if (direction == TOP || direction == BOTTOM)
+        return;
 
     /* We want to jump in the direction of the other computer */
     if (output->pos != direction) {

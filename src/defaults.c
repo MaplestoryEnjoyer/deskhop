@@ -26,7 +26,7 @@ const config_t default_config = {
             .screen_count = 1,
             .screen_index = 1,
             .os = OUTPUT_A_OS,
-            .pos = RIGHT,
+            .pos = RIGHT, /* unused while DESKHOP_LAYOUT_VERTICAL_3PLUS1 is defined (only the stock path reads pos) */
             .screensaver = {
                 .mode = SCREENSAVER_A_MODE,
                 .only_if_inactive = SCREENSAVER_A_ONLY_IF_INACTIVE,
@@ -46,7 +46,7 @@ const config_t default_config = {
             .screen_count = 3, /* bottom PC: 3 monitors in a row (middle = index 1, left = 2, right = 3) */
             .screen_index = 1,
             .os = OUTPUT_B_OS,
-            .pos = LEFT,
+            .pos = LEFT, /* unused while DESKHOP_LAYOUT_VERTICAL_3PLUS1 is defined (only the stock path reads pos) */
             .screensaver = {
                 .mode = SCREENSAVER_B_MODE,
                 .only_if_inactive = SCREENSAVER_B_ONLY_IF_INACTIVE,
