@@ -43,7 +43,7 @@ const config_t default_config = {
                 .top = 0,
                 .bottom = MAX_SCREEN_COORD,
             },
-            .screen_count = 1,
+            .screen_count = 3, /* bottom PC: 3 monitors in a row (middle = index 1, left = 2, right = 3) */
             .screen_index = 1,
             .os = OUTPUT_B_OS,
             .pos = LEFT,

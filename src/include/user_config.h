@@ -173,8 +173,40 @@
  *
  * */
 
-#define OUTPUT_A_OS MACOS
-#define OUTPUT_B_OS LINUX
+#define OUTPUT_A_OS WINDOWS
+#define OUTPUT_B_OS WINDOWS
+
+
+/**================================================== *
+ * ===========  Vertical Layout (fork)  ============ *
+ * ================================================== *
+ *
+ * Custom switching for a non-linear, partly-vertical monitor layout that the
+ * stock left/right model cannot express:
+ *
+ *   - OUTPUT_B = "bottom" PC with a row of monitors
+ *                (screen_index 1 = MIDDLE/main, 2 = LEFT, 3 = RIGHT)
+ *   - OUTPUT_A = "top" PC, a single monitor mounted ABOVE the middle one
+ *
+ * The mouse crosses between the two PCs ONLY at the middle monitor's top edge
+ * (up to OUTPUT_A) and OUTPUT_A's bottom edge (back down to the middle). Moving
+ * left/right just walks across the bottom PC's monitors. The matching switch
+ * logic lives in do_screen_switch() in mouse.c.
+ *
+ * Define DESKHOP_LAYOUT_VERTICAL_3PLUS1 to enable it; comment it out to restore
+ * the stock left/right linear switching. Set screen_count = 3 for the bottom PC
+ * (defaults.c, or via the web config).
+ *
+ * IMPORTANT (Windows): set the MIDDLE monitor as the Windows "primary display"
+ * on the bottom PC. Since KB5003637, Windows maps absolute mouse coordinates
+ * only to the primary monitor (see README known issues); mapping the middle
+ * monitor to screen_index 1 (the absolute "main" screen) is what makes the
+ * vertical jump land correctly. The left/right monitors use DeskHop's
+ * (experimental) relative-mouse workaround for non-primary screens.
+ *
+ * */
+
+#define DESKHOP_LAYOUT_VERTICAL_3PLUS1
 
 
 /**================================================== *
