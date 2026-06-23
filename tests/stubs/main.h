@@ -1,4 +1,15 @@
 /*
+ * This file is part of DeskHop (https://github.com/hrvach/deskhop).
+ * Copyright (c) 2025 Hrvoje Cavrak and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * See the file LICENSE for the full license text.
+ */
+
+/*
  * Minimal host stubs so src/mouse.c can be compiled OFF-TARGET (no Pico SDK,
  * no TinyUSB) for unit-testing the screen-switching logic on a normal PC.
  *
@@ -39,8 +50,9 @@ enum { HID_PROTOCOL_BOOT = 0, HID_PROTOCOL_REPORT = 1 };
 #define MOUSE_ZOOM_SCALING_FACTOR 4
 #define CURRENT_BOARD_IS_ACTIVE_OUTPUT 1
 
-/* Exercise the custom vertical layout branch of do_screen_switch(). */
-#define DESKHOP_LAYOUT_VERTICAL_3PLUS1
+/* The layout macro (DESKHOP_LAYOUT_VERTICAL_3PLUS1) is set by the INCLUDING test
+   file: test_switch.c defines it (vertical layout); test_switch_stock.c leaves it
+   undefined (stock left/right path). The same stubs serve both. */
 
 /* ---- fake queue type (mirror pico/util/queue.h usage) ---- */
 typedef struct { int _unused; } queue_t;
@@ -141,7 +153,13 @@ static inline bool tud_suspended(void) { return false; }
 static inline void tud_remote_wakeup(void) {}
 
 /* Mirrors the part of handlers.c set_active_output() that the switch logic
-   depends on (the real one also restores LEDs and releases held keys). */
+   depends on (the real one also restores LEDs and releases held keys). The
+   vertical-layout reset below matches the firmware's set_active_output(). */
 static inline void set_active_output(device_t *state, uint8_t new_output) {
     state->active_output = new_output;
+#ifdef DESKHOP_LAYOUT_VERTICAL_3PLUS1
+    state->relative_mouse                       = false;
+    state->config.output[OUTPUT_A].screen_index = 1;
+    state->config.output[OUTPUT_B].screen_index = 1;
+#endif
 }

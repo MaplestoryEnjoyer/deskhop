@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
+#
+# This file is part of DeskHop (https://github.com/hrvach/deskhop).
+# Copyright (c) 2025 Hrvoje Cavrak and contributors
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# See the file LICENSE for the full license text.
+#
 """
 Executable behavioural spec ("oracle") for DeskHop's vertical screen-switching.
 
-This is a faithful, line-for-line Python mirror of the switch state machine in
-src/mouse.c (do_screen_switch + switch_virtual_desktop + switch_to_another_pc +
-is_screen_switch_needed), pinned to the custom 3+1 vertical layout enabled by
-DESKHOP_LAYOUT_VERTICAL_3PLUS1.
+This is a Python mirror of the switch-DECISION state machine in src/mouse.c
+(do_screen_switch + switch_virtual_desktop + switch_to_another_pc +
+is_screen_switch_needed) plus the vertical-layout reset in handlers.c
+set_active_output(), pinned to the custom 3+1 vertical layout enabled by
+DESKHOP_LAYOUT_VERTICAL_3PLUS1. Side effects (scale_y_coordinate, LED restore,
+board-sync OUTPUT_SELECT_MSG, key-release) are out of scope and not asserted.
 
 Why this exists: the firmware is RP2040 C and needs an ARM/host C toolchain to
 compile. This oracle lets the switching *logic* be verified on any machine with
@@ -64,8 +76,13 @@ class State:
 # --- faithful mirrors of the C helpers -------------------------------------
 
 def set_active_output(state, new_output):
-    # handlers.c set_active_output(): does NOT touch relative_mouse/screen_index
+    # Mirrors handlers.c set_active_output(): in the vertical layout it also
+    # clears relative_mouse and resets both outputs to the main screen (idx 1),
+    # so a hotkey/UART toggle from a side monitor can't strand relative mode.
     state.active_output = new_output
+    state.relative_mouse = False
+    state.output[OUTPUT_A].screen_index = 1
+    state.output[OUTPUT_B].screen_index = 1
 
 
 def switch_virtual_desktop(state, output, new_index, direction):
@@ -167,11 +184,16 @@ check("inside -> NONE", is_screen_switch_needed(16000, 0, 16000, 0) == NONE)
 print("\nBottom PC, MIDDLE monitor (screen_index 1):")
 s = on_b(1); do_screen_switch(s, LEFT)
 check("LEFT  -> left monitor (idx 2), stay on B", s.cur.screen_index == 2 and s.active_output == OUTPUT_B)
+check("LEFT  -> sets relative_mouse True (non-primary)", s.relative_mouse is True)
+check("LEFT  -> enters left monitor at right edge (pointer_x MAX)", s.pointer_x == MAX_SCREEN_COORD)
 s = on_b(1); do_screen_switch(s, RIGHT)
 check("RIGHT -> right monitor (idx 3), stay on B", s.cur.screen_index == 3 and s.active_output == OUTPUT_B)
+check("RIGHT -> sets relative_mouse True (non-primary)", s.relative_mouse is True)
+check("RIGHT -> enters right monitor at left edge (pointer_x MIN)", s.pointer_x == MIN_SCREEN_COORD)
 s = on_b(1); do_screen_switch(s, TOP)
 check("TOP   -> top PC (OUTPUT_A)", s.active_output == OUTPUT_A)
 check("TOP   -> relative_mouse stays False at crossing", s.relative_mouse is False)
+check("TOP   -> cursor enters at bottom edge (pointer_y MAX)", s.pointer_y == MAX_SCREEN_COORD)
 s = on_b(1); do_screen_switch(s, BOTTOM)
 check("BOTTOM-> no change (cursor stops)", s.active_output == OUTPUT_B and s.cur.screen_index == 1)
 
@@ -194,6 +216,7 @@ s = on_a(); do_screen_switch(s, BOTTOM)
 check("BOTTOM-> bottom PC (OUTPUT_B)", s.active_output == OUTPUT_B)
 check("BOTTOM-> lands on middle (idx 1)", s.output[OUTPUT_B].screen_index == 1)
 check("BOTTOM-> relative_mouse stays False at crossing", s.relative_mouse is False)
+check("BOTTOM-> cursor enters at top edge (pointer_y MIN)", s.pointer_y == MIN_SCREEN_COORD)
 for d in (TOP, LEFT, RIGHT):
     s = on_a(); do_screen_switch(s, d)
     check(f"{DIR_NAME[d]:6}-> no change", s.active_output == OUTPUT_A)
@@ -212,6 +235,15 @@ s = on_b(1, switch_lock=True); do_screen_switch(s, TOP)
 check("switch_lock blocks everything", s.active_output == OUTPUT_B and s.cur.screen_index == 1)
 s = on_b(1, gaming_mode=True); do_screen_switch(s, LEFT)
 check("gaming_mode blocks everything", s.active_output == OUTPUT_B and s.cur.screen_index == 1)
+
+print("\nOutput-toggle (hotkey/UART) from a side monitor must not strand relative mode:")
+s = on_b(3)                     # right monitor: relative_mouse True, B idx 3
+set_active_output(s, OUTPUT_A)  # simulate the hotkey/UART toggle (bypasses do_screen_switch)
+check("toggle to A clears relative_mouse", s.relative_mouse is False)
+check("toggle to A resets bottom PC to middle (idx 1)", s.output[OUTPUT_B].screen_index == 1)
+do_screen_switch(s, BOTTOM)     # return down to the bottom PC
+check("return lands on bottom PC middle (idx 1)", s.active_output == OUTPUT_B and s.output[OUTPUT_B].screen_index == 1)
+check("return keeps relative_mouse False", s.relative_mouse is False)
 
 print("\nRound trip middle <-> top keeps relative_mouse False the whole way:")
 s = on_b(1)

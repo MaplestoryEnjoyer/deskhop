@@ -1,0 +1,33 @@
+name: Host tests
+
+# Compiles and runs the host-side screen-switching tests (no ARM toolchain).
+# These #include src/mouse.c directly against tests/stubs, so they are a plain
+# gcc build kept separate from the firmware (ARM) build in build.yml.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Build and run C switch tests (vertical + stock)
+      shell: bash
+      run: |
+        gcc -std=c11 -Wall -I tests/stubs -I src/include tests/test_switch.c       -lm -o test_switch
+        gcc -std=c11 -Wall -I tests/stubs -I src/include tests/test_switch_stock.c -lm -o test_switch_stock
+        ./test_switch
+        ./test_switch_stock
+
+    - name: Run Python switch oracle
+      shell: bash
+      run: python3 tests/switch_oracle.py

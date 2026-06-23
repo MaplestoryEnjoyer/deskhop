@@ -1,4 +1,15 @@
 /*
+ * This file is part of DeskHop (https://github.com/hrvach/deskhop).
+ * Copyright (c) 2025 Hrvoje Cavrak and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * See the file LICENSE for the full license text.
+ */
+
+/*
  * Host unit test for DeskHop's screen-switching logic.
  *
  * Compiles the REAL src/mouse.c against tests/stubs/main.h (host stubs, no Pico
@@ -15,6 +26,12 @@
  * (A pure-Python equivalent that needs no C toolchain lives in
  *  tests/switch_oracle.py.)
  */
+
+/* Select the vertical-layout branch of do_screen_switch() before mouse.c is
+   pulled in. The stock-branch counterpart is tests/test_switch_stock.c, which
+   leaves this undefined. */
+#define DESKHOP_LAYOUT_VERTICAL_3PLUS1
+
 #include "../src/mouse.c"
 #include <stdio.h>
 
@@ -81,11 +98,16 @@ int main(void) {
     printf("\nBottom PC, MIDDLE monitor (screen_index 1):\n");
     on_bottom(1); do_screen_switch(s, LEFT);
     check("LEFT  -> left monitor (idx 2), stay on B", IDX(OUTPUT_B) == 2 && s->active_output == OUTPUT_B);
+    check("LEFT  -> sets relative_mouse true (non-primary monitor)", s->relative_mouse == true);
+    check("LEFT  -> enters left monitor at right edge (pointer_x MAX)", s->pointer_x == MAX_SCREEN_COORD);
     on_bottom(1); do_screen_switch(s, RIGHT);
     check("RIGHT -> right monitor (idx 3), stay on B", IDX(OUTPUT_B) == 3 && s->active_output == OUTPUT_B);
+    check("RIGHT -> sets relative_mouse true (non-primary monitor)", s->relative_mouse == true);
+    check("RIGHT -> enters right monitor at left edge (pointer_x MIN)", s->pointer_x == MIN_SCREEN_COORD);
     on_bottom(1); do_screen_switch(s, TOP);
     check("TOP   -> top PC (OUTPUT_A)", s->active_output == OUTPUT_A);
     check("TOP   -> relative_mouse stays false at crossing", s->relative_mouse == false);
+    check("TOP   -> cursor enters at bottom edge (pointer_y MAX)", s->pointer_y == MAX_SCREEN_COORD);
     on_bottom(1); do_screen_switch(s, BOTTOM);
     check("BOTTOM-> no change (cursor stops)", s->active_output == OUTPUT_B && IDX(OUTPUT_B) == 1);
 
@@ -108,6 +130,7 @@ int main(void) {
     check("BOTTOM-> bottom PC (OUTPUT_B)", s->active_output == OUTPUT_B);
     check("BOTTOM-> lands on middle (idx 1)", IDX(OUTPUT_B) == 1);
     check("BOTTOM-> relative_mouse stays false at crossing", s->relative_mouse == false);
+    check("BOTTOM-> cursor enters at top edge (pointer_y MIN)", s->pointer_y == MIN_SCREEN_COORD);
     on_top(); do_screen_switch(s, TOP);
     check("TOP   -> no change", s->active_output == OUTPUT_A);
     on_top(); do_screen_switch(s, LEFT);
@@ -128,6 +151,15 @@ int main(void) {
     check("switch_lock blocks everything", s->active_output == OUTPUT_B && IDX(OUTPUT_B) == 1);
     on_bottom(1); s->gaming_mode = true; do_screen_switch(s, LEFT);
     check("gaming_mode blocks everything", s->active_output == OUTPUT_B && IDX(OUTPUT_B) == 1);
+
+    printf("\nOutput-toggle (hotkey/UART) from a side monitor must not strand relative mode:\n");
+    on_bottom(3);                    /* right monitor: relative_mouse true, B at idx 3 */
+    set_active_output(s, OUTPUT_A);  /* simulate the hotkey/UART output toggle (bypasses do_screen_switch) */
+    check("toggle to A clears relative_mouse", s->relative_mouse == false);
+    check("toggle to A resets bottom PC to middle (idx 1)", IDX(OUTPUT_B) == 1);
+    do_screen_switch(s, BOTTOM);     /* return down to the bottom PC */
+    check("return lands on bottom PC middle (idx 1)", s->active_output == OUTPUT_B && IDX(OUTPUT_B) == 1);
+    check("return keeps relative_mouse false", s->relative_mouse == false);
 
     printf("\nRound trip middle <-> top keeps relative_mouse false throughout:\n");
     on_bottom(1);
