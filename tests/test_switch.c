@@ -89,11 +89,13 @@ int main(void) {
     device_t *s = &global_state;
 
     printf("Edge detection (is_screen_switch_needed):\n");
-    check("left edge -> LEFT",     is_screen_switch_needed(0, -1, 16000, 0) == LEFT);
-    check("right edge -> RIGHT",   is_screen_switch_needed(MAX_SCREEN_COORD, 1, 16000, 0) == RIGHT);
-    check("top edge -> TOP",       is_screen_switch_needed(16000, 0, 0, -1) == TOP);
-    check("bottom edge -> BOTTOM", is_screen_switch_needed(16000, 0, MAX_SCREEN_COORD, 1) == BOTTOM);
-    check("inside -> NONE",        is_screen_switch_needed(16000, 0, 16000, 0) == NONE);
+    reset_state();
+    output_t *eo = &s->config.output[OUTPUT_B];  /* middle monitor (screen_index 1); jump_threshold 0 */
+    check("left edge -> LEFT",     is_screen_switch_needed(eo, 0, -1, 16000, 0) == LEFT);
+    check("right edge -> RIGHT",   is_screen_switch_needed(eo, MAX_SCREEN_COORD, 1, 16000, 0) == RIGHT);
+    check("top edge -> TOP",       is_screen_switch_needed(eo, 16000, 0, 0, -1) == TOP);
+    check("bottom edge -> BOTTOM", is_screen_switch_needed(eo, 16000, 0, MAX_SCREEN_COORD, 1) == BOTTOM);
+    check("inside -> NONE",        is_screen_switch_needed(eo, 16000, 0, 16000, 0) == NONE);
 
     printf("\nBottom PC, MIDDLE monitor (screen_index 1):\n");
     on_bottom(1); do_screen_switch(s, LEFT);

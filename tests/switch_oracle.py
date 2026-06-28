@@ -129,15 +129,35 @@ def do_screen_switch(state, direction):
             switch_to_another_pc(state, output, OUTPUT_B, direction)
 
 
-def is_screen_switch_needed(px, ox, py, oy, jump_threshold=0):
-    if px + ox < MIN_SCREEN_COORD - jump_threshold:
-        return LEFT
-    if px + ox > MAX_SCREEN_COORD + jump_threshold:
-        return RIGHT
-    if py + oy < MIN_SCREEN_COORD - jump_threshold:
-        return TOP
-    if py + oy > MAX_SCREEN_COORD + jump_threshold:
-        return BOTTOM
+CONFIG_JUMP_THRESHOLD = 0  # mirrors global_state.config.jump_threshold (0 in these tests)
+
+
+def get_jump_threshold(output, direction):
+    # src/mouse.c get_jump_threshold() -- DESKHOP_LAYOUT_VERTICAL_3PLUS1 branch:
+    # only TOP/BOTTOM cross PCs (and need the jump "force"); left/right is always
+    # local between the bottom PC's monitors, so frictionless.
+    if direction in (TOP, BOTTOM):
+        return CONFIG_JUMP_THRESHOLD
+    return 0
+
+
+def is_screen_switch_needed(output, position_x, offset_x, position_y, offset_y):
+    # Horizontal (X) axis
+    if offset_x != 0:
+        direction = LEFT if offset_x < 0 else RIGHT
+        threshold = get_jump_threshold(output, direction)
+        if position_x + offset_x < MIN_SCREEN_COORD - threshold:
+            return LEFT
+        if position_x + offset_x > MAX_SCREEN_COORD + threshold:
+            return RIGHT
+    # Vertical (Y) axis (DESKHOP_LAYOUT_VERTICAL_3PLUS1)
+    if offset_y != 0:
+        direction = TOP if offset_y < 0 else BOTTOM
+        threshold = get_jump_threshold(output, direction)
+        if position_y + offset_y < MIN_SCREEN_COORD - threshold:
+            return TOP
+        if position_y + offset_y > MAX_SCREEN_COORD + threshold:
+            return BOTTOM
     return NONE
 
 
@@ -175,11 +195,12 @@ def on_a(**kw):
 
 
 print("Edge detection (is_screen_switch_needed):")
-check("left edge -> LEFT", is_screen_switch_needed(0, -1, 16000, 0) == LEFT)
-check("right edge -> RIGHT", is_screen_switch_needed(MAX_SCREEN_COORD, 1, 16000, 0) == RIGHT)
-check("top edge -> TOP", is_screen_switch_needed(16000, 0, 0, -1) == TOP)
-check("bottom edge -> BOTTOM", is_screen_switch_needed(16000, 0, MAX_SCREEN_COORD, 1) == BOTTOM)
-check("inside -> NONE", is_screen_switch_needed(16000, 0, 16000, 0) == NONE)
+eo = Output(OUTPUT_B, WINDOWS, screen_count=3, screen_index=1, pos=LEFT)  # middle monitor
+check("left edge -> LEFT", is_screen_switch_needed(eo, 0, -1, 16000, 0) == LEFT)
+check("right edge -> RIGHT", is_screen_switch_needed(eo, MAX_SCREEN_COORD, 1, 16000, 0) == RIGHT)
+check("top edge -> TOP", is_screen_switch_needed(eo, 16000, 0, 0, -1) == TOP)
+check("bottom edge -> BOTTOM", is_screen_switch_needed(eo, 16000, 0, MAX_SCREEN_COORD, 1) == BOTTOM)
+check("inside -> NONE", is_screen_switch_needed(eo, 16000, 0, 16000, 0) == NONE)
 
 print("\nBottom PC, MIDDLE monitor (screen_index 1):")
 s = on_b(1); do_screen_switch(s, LEFT)

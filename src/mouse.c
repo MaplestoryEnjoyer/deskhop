@@ -16,21 +16,60 @@
 #define MACOS_SWITCH_MOVE_COUNT 5
 #define ACCEL_POINTS 7
 
+uint16_t get_jump_threshold(output_t *output, enum screen_pos_e direction) {
+    const uint16_t NO_JUMP_THRESHOLD = 0;
+
+#ifdef DESKHOP_LAYOUT_VERTICAL_3PLUS1
+    /* 3+1 vertical layout: only the vertical (TOP/BOTTOM) crossing changes PCs and
+       needs the jump "force". Left/right movement is always local (between the
+       bottom PC's monitors), so it stays frictionless. */
+    if (direction == TOP || direction == BOTTOM)
+        return global_state.config.jump_threshold;
+
+    return NO_JUMP_THRESHOLD;
+#else
+    /* If on non-main local screen, every possible switch is local */
+    if (output->screen_index > 1)
+        return NO_JUMP_THRESHOLD;
+
+    /* If on main screen but going away from the border, switch is local */
+    if (output->pos == direction && output->screen_index == 1)
+        return NO_JUMP_THRESHOLD;
+
+    /* ... in all other cases, switch is non-local (jump to another pc) */
+    return global_state.config.jump_threshold;
+#endif
+}
+
 /* Check if our upcoming mouse movement would result in having to switch outputs.
-   Checks all four edges so that vertical (TOP/BOTTOM) layouts are supported in
-   addition to the default horizontal (LEFT/RIGHT) one. */
-enum screen_pos_e is_screen_switch_needed(int position_x, int offset_x, int position_y, int offset_y) {
-    if (position_x + offset_x < MIN_SCREEN_COORD - global_state.config.jump_threshold)
-        return LEFT;
+   Upstream checks the horizontal (X) axis; the vertical (Y) axis is added under
+   DESKHOP_LAYOUT_VERTICAL_3PLUS1 so TOP/BOTTOM layouts are supported as well. */
+enum screen_pos_e is_screen_switch_needed(output_t *output, int position_x, int offset_x, int position_y, int offset_y) {
+    /* Horizontal (X) axis */
+    if (offset_x != 0) {
+        enum screen_pos_e direction = (offset_x < 0) ? LEFT : RIGHT;
+        uint16_t threshold          = get_jump_threshold(output, direction);
 
-    if (position_x + offset_x > MAX_SCREEN_COORD + global_state.config.jump_threshold)
-        return RIGHT;
+        if (position_x + offset_x < MIN_SCREEN_COORD - threshold)
+            return LEFT;
 
-    if (position_y + offset_y < MIN_SCREEN_COORD - global_state.config.jump_threshold)
-        return TOP;
+        if (position_x + offset_x > MAX_SCREEN_COORD + threshold)
+            return RIGHT;
+    }
 
-    if (position_y + offset_y > MAX_SCREEN_COORD + global_state.config.jump_threshold)
-        return BOTTOM;
+#ifdef DESKHOP_LAYOUT_VERTICAL_3PLUS1
+    /* Vertical (Y) axis - only the custom 3+1 layout switches on the top/bottom edges */
+    if (offset_y != 0) {
+        enum screen_pos_e direction = (offset_y < 0) ? TOP : BOTTOM;
+        uint16_t threshold          = get_jump_threshold(output, direction);
+
+        if (position_y + offset_y < MIN_SCREEN_COORD - threshold)
+            return TOP;
+
+        if (position_y + offset_y > MAX_SCREEN_COORD + threshold)
+            return BOTTOM;
+    }
+#endif
 
     return NONE;
 }
@@ -117,7 +156,7 @@ enum screen_pos_e update_mouse_position(device_t *state, mouse_values_t *values)
     int offset_y = round(values->move_y * acceleration_factor * (current->speed_y >> reduce_speed));
 
     /* Determine if our upcoming movement would stay within the screen */
-    enum screen_pos_e switch_direction = is_screen_switch_needed(state->pointer_x, offset_x, state->pointer_y, offset_y);
+    enum screen_pos_e switch_direction = is_screen_switch_needed(current, state->pointer_x, offset_x, state->pointer_y, offset_y);
 
     /* Update movement */
     state->pointer_x = move_and_keep_on_screen(state->pointer_x, offset_x);
@@ -213,7 +252,10 @@ void switch_virtual_desktop_macos(device_t *state, int direction) {
     mouse_report_t move_relative_one = {
         .x = move,
         .mode = RELATIVE,
-        .buttons = state->mouse_buttons,
+        /* Force buttons to 0 for relative movement to avoid duplicating the button 
+           press state, which would leave the relative HID mouse permanently stuck 
+           down if the user is dragging an item while switching desktops. */
+        .buttons = 0,
     };
 
     output_mouse_report(&edge_position, state);
@@ -304,9 +346,10 @@ void do_screen_switch(device_t *state, int direction) {
 #else
     /* Stock linear (left/right) switching. */
 
-    /* Vertical edges are not switch points in the stock linear layout. The
-       4-edge is_screen_switch_needed() can return TOP/BOTTOM globally, so guard
-       against them here (matches the AsocPro reference). */
+    /* Defensive: in a stock build is_screen_switch_needed() does not produce
+       TOP/BOTTOM (the vertical axis is gated by DESKHOP_LAYOUT_VERTICAL_3PLUS1),
+       but the stock linear layout never switches on vertical edges, so guard
+       against them regardless (matches the AsocPro reference). */
     if (direction == TOP || direction == BOTTOM)
         return;
 
@@ -390,6 +433,16 @@ void process_mouse_report(uint8_t *raw_report, int len, uint8_t itf, hid_interfa
 
     /* Interpret the mouse HID report, extract and save values we need. */
     extract_report_values(raw_report, len, state, &values, iface);
+
+    /* If nothing changed, don't send a report. This prevents composite keyboards
+       (e.g. QMK) that expose a mouse HID interface from generating spurious
+       absolute position reports when they send zero-movement mouse reports during
+       keyboard events. */
+    if (values.move_x == 0 && values.move_y == 0 &&
+        values.wheel == 0 && values.pan == 0 &&
+        values.buttons == state->mouse_buttons) {
+        return;
+    }
 
     /* Calculate and update mouse pointer movement. */
     enum screen_pos_e switch_direction = update_mouse_position(state, &values);
