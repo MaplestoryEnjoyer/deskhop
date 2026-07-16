@@ -129,15 +129,20 @@ def do_screen_switch(state, direction):
             switch_to_another_pc(state, output, OUTPUT_B, direction)
 
 
-CONFIG_JUMP_THRESHOLD = 0  # mirrors global_state.config.jump_threshold (0 in these tests)
+CONFIG_JUMP_THRESHOLD = 0       # mirrors global_state.config.jump_threshold (0 in these tests)
+CONFIG_JUMP_THRESHOLD_DOWN = 0  # mirrors config.jump_threshold_down (fork: separate down force)
 
 
 def get_jump_threshold(output, direction):
     # src/mouse.c get_jump_threshold() -- DESKHOP_LAYOUT_VERTICAL_3PLUS1 branch:
     # only TOP/BOTTOM cross PCs (and need the jump "force"); left/right is always
-    # local between the bottom PC's monitors, so frictionless.
-    if direction in (TOP, BOTTOM):
+    # local between the bottom PC's monitors, so frictionless. The downward
+    # crossing has its own force (the Windows taskbar sits on the top PC's
+    # bottom edge), mirrored by CONFIG_JUMP_THRESHOLD_DOWN.
+    if direction == TOP:
         return CONFIG_JUMP_THRESHOLD
+    if direction == BOTTOM:
+        return CONFIG_JUMP_THRESHOLD_DOWN
     return 0
 
 
@@ -201,6 +206,17 @@ check("right edge -> RIGHT", is_screen_switch_needed(eo, MAX_SCREEN_COORD, 1, 16
 check("top edge -> TOP", is_screen_switch_needed(eo, 16000, 0, 0, -1) == TOP)
 check("bottom edge -> BOTTOM", is_screen_switch_needed(eo, 16000, 0, MAX_SCREEN_COORD, 1) == BOTTOM)
 check("inside -> NONE", is_screen_switch_needed(eo, 16000, 0, 16000, 0) == NONE)
+
+print("\nPer-direction jump thresholds (vertical fork):")
+CONFIG_JUMP_THRESHOLD = 400
+CONFIG_JUMP_THRESHOLD_DOWN = 100
+check("up push within threshold -> NONE", is_screen_switch_needed(eo, 16000, 0, 0, -400) == NONE)
+check("up push beyond threshold -> TOP", is_screen_switch_needed(eo, 16000, 0, 0, -401) == TOP)
+check("down push within its threshold -> NONE", is_screen_switch_needed(eo, 16000, 0, MAX_SCREEN_COORD, 100) == NONE)
+check("down push beyond its threshold -> BOTTOM", is_screen_switch_needed(eo, 16000, 0, MAX_SCREEN_COORD, 101) == BOTTOM)
+check("lateral stays frictionless at 400/100", is_screen_switch_needed(eo, 0, -1, 16000, 0) == LEFT)
+CONFIG_JUMP_THRESHOLD = 0
+CONFIG_JUMP_THRESHOLD_DOWN = 0
 
 print("\nBottom PC, MIDDLE monitor (screen_index 1):")
 s = on_b(1); do_screen_switch(s, LEFT)

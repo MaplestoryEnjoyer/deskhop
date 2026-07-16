@@ -214,6 +214,11 @@ void initial_setup(device_t *state) {
     /* Search the persistent storage sector in flash for valid config or use defaults */
     load_config(state);
 
+    /* Optionally boot with switching locked (persistent switch-lock seed). The
+       switch-lock combo (Right Ctrl + K) still toggles it at runtime; the web
+       config ("Disable Switching") sets this boot default. */
+    state->switch_lock = state->config.disable_switching;
+
     /* Init and enable the on-board LED GPIO as output */
     gpio_init(GPIO_LED_PIN);
     gpio_set_dir(GPIO_LED_PIN, GPIO_OUT);

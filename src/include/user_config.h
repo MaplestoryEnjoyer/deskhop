@@ -92,12 +92,19 @@
 #define MOUSE_SPEED_B_FACTOR_Y 28
 
 #ifdef DESKHOP_LAYOUT_VERTICAL_3PLUS1
-/* The middle monitor's top edge is the only PC crossing in the vertical layout
-   and is easy to hit by accident (reaching a menu bar, fast upward flicks), so
-   require deliberate "force" to cross. Tune in the web config if desired. */
+/* The middle monitor's top edge is the only upward PC crossing in the vertical
+   layout and is easy to hit by accident (reaching a menu bar, fast upward
+   flicks), so require deliberate "force" to cross. Tune in the web config
+   ("Jump Threshold (Up)") if desired. */
 #define JUMP_THRESHOLD 400
+/* The downward crossing (top PC's bottom edge -> middle monitor) gets its own
+   force: the Windows taskbar sits right on that edge, so overshooting the
+   taskbar should not drop you onto the other PC. Tuned separately in the web
+   config ("Jump Threshold (Down)"). */
+#define JUMP_THRESHOLD_DOWN 400
 #else
 #define JUMP_THRESHOLD 0
+#define JUMP_THRESHOLD_DOWN 0
 #endif
 
 /* Mouse acceleration */
@@ -246,6 +253,23 @@
  * */
 
 #define ENFORCE_PORTS 0
+
+
+/**================================================== *
+ * ==============  Disable Switching  =============== *
+ * ================================================== *
+ *
+ * If set to 1, the device boots with the switch lock engaged: the mouse cannot
+ * cross to the other PC and the output-toggle hotkey is ignored, exactly as if
+ * the switch-lock combo (Right Ctrl + K) had been pressed. That combo still
+ * works at runtime to unlock (and re-lock); this only seeds the boot state.
+ * Also configurable without a rebuild via the web config ("Disable Switching").
+ *
+ * DISABLE_SWITCHING: [0, 1]
+ *
+ * */
+
+#define DISABLE_SWITCHING 0
 
 
 /**================================================== *

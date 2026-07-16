@@ -80,7 +80,12 @@ typedef struct {
     uint16_t jump_threshold;
 
     output_t output[NUM_SCREENS];
-    uint32_t _reserved;
+
+    /* Fork additions, carved out of the old uint32_t _reserved so the struct
+       footprint is unchanged. */
+    uint8_t  disable_switching;    // Boot with switch lock engaged (persistent web-config toggle)
+    uint8_t  _reserved;
+    uint16_t jump_threshold_down;  // Vertical layout: separate "force" for the downward PC crossing
 
     // Keep checksum at the end of the struct
     uint32_t checksum;

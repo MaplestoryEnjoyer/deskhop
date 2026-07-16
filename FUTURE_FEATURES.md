@@ -68,8 +68,21 @@ verifies the flag blocks both switch paths.
 
 ### Status
 
-Deferred. Small, well-scoped change. No local toolchain, so the loop is: edit ->
-push -> CI builds `.uf2` -> reflash.
+SHIPPED 2026-07-16 (persistent-default flavor), together with two extras that
+came out of the same review:
+
+- **Per-direction jump thresholds**: `jump_threshold_down` gives the downward
+  crossing (top PC bottom edge, where the Windows taskbar lives) its own force,
+  separate from the up-crossing. Web config: "Jump Threshold (Up)" / "(Down)".
+- **Release-on-tag CI**: pushing a `v*` tag attaches `deskhop.uf2` to a GitHub
+  Release, since workflow artifacts expire after ~90 days.
+
+Config version bumped 9 -> 10 (new fields carved out of `_reserved`; footprint
+unchanged). NOTE: the bump reseeds saved config on first boot after flashing,
+so web-config tweaks (e.g. a lowered jump threshold) must be re-applied once.
+
+The hard-lock flavor remains unbuilt; revisit only if the Right Ctrl + K escape
+hatch proves to be a problem.
 
 ---
 

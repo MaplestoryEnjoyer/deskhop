@@ -97,6 +97,16 @@ int main(void) {
     check("bottom edge -> BOTTOM", is_screen_switch_needed(eo, 16000, 0, MAX_SCREEN_COORD, 1) == BOTTOM);
     check("inside -> NONE",        is_screen_switch_needed(eo, 16000, 0, 16000, 0) == NONE);
 
+    printf("\nPer-direction jump thresholds (vertical fork):\n");
+    reset_state();
+    s->config.jump_threshold      = 400;
+    s->config.jump_threshold_down = 100;
+    check("up push within threshold -> NONE",         is_screen_switch_needed(eo, 16000, 0, 0, -400) == NONE);
+    check("up push beyond threshold -> TOP",          is_screen_switch_needed(eo, 16000, 0, 0, -401) == TOP);
+    check("down push within its threshold -> NONE",   is_screen_switch_needed(eo, 16000, 0, MAX_SCREEN_COORD, 100) == NONE);
+    check("down push beyond its threshold -> BOTTOM", is_screen_switch_needed(eo, 16000, 0, MAX_SCREEN_COORD, 101) == BOTTOM);
+    check("lateral stays frictionless at 400/100",    is_screen_switch_needed(eo, 0, -1, 16000, 0) == LEFT);
+
     printf("\nBottom PC, MIDDLE monitor (screen_index 1):\n");
     on_bottom(1); do_screen_switch(s, LEFT);
     check("LEFT  -> left monitor (idx 2), stay on B", IDX(OUTPUT_B) == 2 && s->active_output == OUTPUT_B);

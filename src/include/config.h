@@ -15,11 +15,13 @@
 #include "misc.h"
 #include "screen.h"
 
-/* Bumped 8 -> 9 for the vertical 3+1 layout default-shape change (OUTPUT_B
-   screen_count = 3, both outputs default to Windows). The bump forces a one-time
-   reseed from default_config on units still holding the old v8 config, so the
-   new defaults actually take effect instead of stale flash values winning. */
-#define CURRENT_CONFIG_VERSION 9
+/* Bumped 9 -> 10: the config gained disable_switching (persistent switch-lock
+   seed) and jump_threshold_down (separate force for the downward PC crossing),
+   carved out of the old _reserved field. Any bump forces a one-time reseed from
+   default_config on units still holding an older config, so the new fields
+   start from known values instead of stale flash bytes. (8 -> 9 was the
+   vertical 3+1 default-shape change: OUTPUT_B screen_count = 3, both Windows.) */
+#define CURRENT_CONFIG_VERSION 10
 
 /*==============================================================================
  *  Configuration Data

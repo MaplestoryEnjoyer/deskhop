@@ -23,8 +23,13 @@ uint16_t get_jump_threshold(output_t *output, enum screen_pos_e direction) {
     /* 3+1 vertical layout: only the vertical (TOP/BOTTOM) crossing changes PCs and
        needs the jump "force". Left/right movement is always local (between the
        bottom PC's monitors), so it stays frictionless. */
-    if (direction == TOP || direction == BOTTOM)
+    if (direction == TOP)
         return global_state.config.jump_threshold;
+
+    /* The downward crossing has its own force: the Windows taskbar sits on the
+       top PC's bottom edge, so it is tuned separately from the up-crossing. */
+    if (direction == BOTTOM)
+        return global_state.config.jump_threshold_down;
 
     return NO_JUMP_THRESHOLD;
 #else

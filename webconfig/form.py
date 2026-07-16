@@ -30,13 +30,17 @@ CONFIG_ = [
     FormField(1001, "Mouse", elem="label"),
     FormField(71, "Force Mouse Boot Mode", None, {}, "uint8", "checkbox"),
     FormField(75, "Enable Acceleration", None, {}, "uint8", "checkbox"),
-    FormField(77, "Jump Threshold", 0, {"min": 0, "max": 3000}, "uint16", "range"),
+    FormField(77, "Jump Threshold (Up)", 0, {"min": 0, "max": 3000}, "uint16", "range"),
+    FormField(84, "Jump Threshold (Down)", 0, {"min": 0, "max": 3000}, "uint16", "range"),
 
     FormField(1002, "Keyboard", elem="label"),
     FormField(72, "Force KBD Boot Protocol", None, {}, "uint8", "checkbox"),
     FormField(73, "KBD LED as Indicator", None, {}, "uint8", "checkbox"),
 
     FormField(76, "Enforce Ports", None, {}, "uint8", "checkbox"),
+
+    FormField(1004, "Switching", elem="label"),
+    FormField(83, "Disable Switching", None, {}, "uint8", "checkbox"),
 ]
 
 OUTPUT_ = [

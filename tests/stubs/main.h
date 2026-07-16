@@ -74,7 +74,9 @@ typedef struct {
 
 typedef struct {
     uint16_t jump_threshold;
+    uint16_t jump_threshold_down;  /* fork: separate force for the downward PC crossing */
     uint8_t  enable_acceleration;
+    uint8_t  disable_switching;    /* fork: boot-time switch-lock seed (consumed in setup.c) */
     output_t output[2];
 } config_t;
 
