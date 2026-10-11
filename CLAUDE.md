@@ -28,11 +28,14 @@ no-toolchain logic check of the switch state machine.
 
 ## Key facts (so a fresh session can act)
 
-- DeskHop outputs: **OUTPUT_B = the 3-monitor "dev" PC** (screen_index 1 = MIDDLE,
-  2 = LEFT, 3 = RIGHT); **OUTPUT_A = the single-monitor "Secondary" PC** mounted
-  above the middle. The PCs cross only at the middle monitor's top edge. Wire these
+- DeskHop outputs: **OUTPUT_B = the 3-monitor PC** (screen_index 1 = MIDDLE,
+  2 = LEFT, 3 = RIGHT); **OUTPUT_A = the single-monitor PC** mounted above the
+  middle. The PCs cross only at the middle monitor's top edge. Wire these
   backwards and the cursor crosses the wrong way (and `screen_count = 3` lands on
   the wrong PC).
+- Naming: the user calls the 3-monitor PC **"Work"** and the 1-monitor top PC
+  **"Dev"**. Code comments that say "dev = OUTPUT_B" use the opposite labels, so
+  go by monitor count and never repeat the code's labels to the user.
 - On Windows the MIDDLE monitor must be the OS "primary display" (absolute-coords
   requirement, see `user_config.h`).
 - Switching logic lives in `src/mouse.c` (`do_screen_switch`), with the PC-switch
